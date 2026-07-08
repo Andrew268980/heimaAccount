@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(pnpm --version)",
+      "Bash(rustc --version)",
+      "Bash(cargo --version)",
+      "Bash(npm install *)",
+      "Bash(curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs)",
+      "Bash(sh -s -- -y)",
+      "Read(//e/SophomoreSummer/ClaudeVibeCoding/heimaAccount-tmp/**)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm tauri *)",
+      "Bash(ls \"e:/SophomoreSummer/ClaudeVibeCoding/heimaAccount-tmp/src-tauri/\" 2>&1)",
+      "Read(//e/SophomoreSummer/ClaudeVibeCoding/heimaAccount-tmp/src-tauri/**)",
+      "Bash(cp -r \"e:/SophomoreSummer/ClaudeVibeCoding/heimaAccount-tmp/\"* \"e:/SophomoreSummer/ClaudeVibeCoding/heimaAccount/\")",
+      "Bash(cp -r \"e:/SophomoreSummer/ClaudeVibeCoding/heimaAccount-tmp/\".* \"e:/SophomoreSummer/ClaudeVibeCoding/heimaAccount/\")",
+      "Bash(cp /tmp/CLAUDE.md.backup \"e:/SophomoreSummer/ClaudeVibeCoding/heimaAccount/CLAUDE.md\")",
+      "Bash(rm -rf \"e:/SophomoreSummer/ClaudeVibeCoding/heimaAccount-tmp\")",
+      "Bash(pnpm build *)",
+      "Bash(pkill -f \"cargo\")",
+      "Bash(pkill -f \"tauri\")",
+      "Bash(npx tsc *)",
+      "Bash(npx vite *)"
+    ]
+  }
+}
