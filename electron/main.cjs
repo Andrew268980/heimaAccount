@@ -169,16 +169,95 @@ function registerIpcHandlers(db) {
 
   // ==================== 分类 IPC ====================
 
-  // 获取分类树（一级分类 + 各自的二级分类）
+  // 获取分类树（含 ID）
   ipcMain.handle('category:getTree', () => {
     const parents = db.prepare('SELECT * FROM categories WHERE parent_id IS NULL ORDER BY id').all()
     const children = db.prepare('SELECT * FROM categories WHERE parent_id IS NOT NULL ORDER BY id').all()
 
     return parents.map((p) => ({
+      id: p.id,
       name: p.name,
       icon: p.icon,
-      children: children.filter((c) => c.parent_id === p.id).map((c) => c.name),
+      children: children
+        .filter((c) => c.parent_id === p.id)
+        .map((c) => ({ id: c.id, name: c.name })),
     }))
+  })
+
+  // ==================== 分类 CRUD IPC ====================
+
+  // 添加分类
+  ipcMain.handle('category:add', (_event, data) => {
+    const result = db.prepare('INSERT INTO categories (name, icon, parent_id) VALUES (?, ?, ?)').run(
+      data.name,
+      data.icon || '',
+      data.parent_id || null,
+    )
+    return { id: result.lastInsertRowid, ...data }
+  })
+
+  // 更新分类（改名同步更新 records 表）
+  ipcMain.handle('category:update', (_event, { id, data }) => {
+    const oldCat = db.prepare('SELECT * FROM categories WHERE id = ?').get(id)
+    if (!oldCat) {
+      throw new Error('分类不存在')
+    }
+
+    const newName = data.name !== undefined ? data.name : oldCat.name
+    const newIcon = data.icon !== undefined ? data.icon : oldCat.icon
+
+    // 更新 categories 表
+    db.prepare('UPDATE categories SET name = ?, icon = ? WHERE id = ?').run(newName, newIcon, id)
+
+    // 如果改名了，同步更新 records 表
+    if (newName !== oldCat.name) {
+      if (oldCat.parent_id === null) {
+        // 一级分类：更新 records.category_level1
+        db.prepare('UPDATE records SET category_level1 = ? WHERE category_level1 = ?').run(
+          newName,
+          oldCat.name,
+        )
+      } else {
+        // 二级分类：更新 records.category_level2
+        db.prepare('UPDATE records SET category_level2 = ? WHERE category_level2 = ?').run(
+          newName,
+          oldCat.name,
+        )
+      }
+    }
+
+    return { id, name: newName, icon: newIcon }
+  })
+
+  // 删除分类（检查是否有记录使用）
+  ipcMain.handle('category:delete', (_event, id) => {
+    const cat = db.prepare('SELECT * FROM categories WHERE id = ?').get(id)
+    if (!cat) {
+      throw new Error('分类不存在')
+    }
+
+    // 检查是否有记录使用该分类
+    let recordCount = 0
+    if (cat.parent_id === null) {
+      // 一级分类
+      recordCount = db
+        .prepare('SELECT COUNT(*) as count FROM records WHERE category_level1 = ?')
+        .get(cat.name).count
+    } else {
+      // 二级分类：需要先知道父分类名
+      const parent = db.prepare('SELECT name FROM categories WHERE id = ?').get(cat.parent_id)
+      recordCount = db
+        .prepare('SELECT COUNT(*) as count FROM records WHERE category_level1 = ? AND category_level2 = ?')
+        .get(parent ? parent.name : '', cat.name).count
+    }
+
+    if (recordCount > 0) {
+      return { success: false, message: `该分类下有 ${recordCount} 条记录，无法删除` }
+    }
+
+    // CASCADE 会自动删除子分类
+    db.prepare('DELETE FROM categories WHERE id = ?').run(id)
+    return { success: true, message: '删除成功' }
   })
 
   // ==================== 导入导出 IPC ====================

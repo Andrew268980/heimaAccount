@@ -6,7 +6,7 @@ const path = require('path')
 delete process.env.ELECTRON_RUN_AS_NODE
 
 const electronPath = path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron.exe')
-const child = spawn(electronPath, ['.'], {
+const child = spawn(electronPath, ['.', '--dev'], {
   stdio: 'inherit',
   env: process.env,
 })

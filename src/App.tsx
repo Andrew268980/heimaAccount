@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button'
 import ExpenseForm from '@/components/ExpenseForm'
 import ExpenseList from '@/components/ExpenseList'
 import StatsPage from '@/pages/StatsPage'
+import SettingsPage from '@/pages/SettingsPage'
 import { addExpense, updateExpense, exportCSV, importCSV } from '@/lib/db'
 import { cn } from '@/lib/utils'
 import type { AddExpenseRequest, Expense } from '@/types/expense'
 
-type Tab = 'bills' | 'stats'
+type Tab = 'bills' | 'stats' | 'settings'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('bills')
@@ -84,6 +85,7 @@ export default function App() {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'bills', label: '账单' },
     { key: 'stats', label: '统计' },
+    { key: 'settings', label: '设置' },
   ]
 
   return (
@@ -185,9 +187,16 @@ export default function App() {
             {/* Expense List */}
             <ExpenseList refreshKey={refreshKey} onEdit={openEditForm} />
           </>
-        ) : (
+        ) : activeTab === 'stats' ? (
           /* Statistics */
           <StatsPage />
+        ) : (
+          /* Settings */
+          <SettingsPage
+            onCategoriesChanged={() => {
+              setRefreshKey((k) => k + 1)
+            }}
+          />
         )}
       </main>
     </div>

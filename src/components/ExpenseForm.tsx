@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { CATEGORIES } from '@/lib/categories'
+import { getCategoryTree } from '@/lib/db'
 import { cn } from '@/lib/utils'
 import type { AddExpenseRequest, Expense, RecordType } from '@/types/expense'
+import type { CategoryTreeNode } from '@/types/electron'
 
 interface ExpenseFormProps {
   onSubmit: (data: AddExpenseRequest) => void
@@ -22,8 +23,13 @@ export default function ExpenseForm({ onSubmit, onCancel, editRecord }: ExpenseF
   const [level2, setLevel2] = useState(editRecord?.category_level2 || '')
   const [date, setDate] = useState(editRecord?.date || today)
   const [note, setNote] = useState(editRecord?.note || '')
+  const [categories, setCategories] = useState<CategoryTreeNode[]>([])
 
-  const selectedCategory = CATEGORIES.find((c) => c.name === level1)
+  useEffect(() => {
+    getCategoryTree().then(setCategories).catch(console.error)
+  }, [])
+
+  const selectedCategory = categories.find((c) => c.name === level1)
   const isEdit = !!editRecord
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -105,7 +111,7 @@ export default function ExpenseForm({ onSubmit, onCancel, editRecord }: ExpenseF
       <div className="space-y-2">
         <Label>一级分类</Label>
         <div className="grid grid-cols-5 gap-2">
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat.name}
               type="button"
@@ -134,17 +140,17 @@ export default function ExpenseForm({ onSubmit, onCancel, editRecord }: ExpenseF
           <div className="flex flex-wrap gap-2">
             {selectedCategory.children.map((child) => (
               <button
-                key={child}
+                key={child.id}
                 type="button"
-                onClick={() => setLevel2(child)}
+                onClick={() => setLevel2(child.name)}
                 className={cn(
                   'rounded-full border px-3 py-1.5 text-sm transition-all',
-                  level2 === child
+                  level2 === child.name
                     ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                     : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
                 )}
               >
-                {child}
+                {child.name}
               </button>
             ))}
           </div>

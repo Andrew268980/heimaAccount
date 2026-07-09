@@ -33,6 +33,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 获取分类树
   getCategoryTree: () => ipcRenderer.invoke('category:getTree'),
 
+  // 分类管理
+  addCategory: (data) => ipcRenderer.invoke('category:add', data),
+  updateCategory: (id, data) => ipcRenderer.invoke('category:update', { id, data }),
+  deleteCategory: (id) => ipcRenderer.invoke('category:delete', id),
+
   // 导出/导入 CSV
   exportCSV: () => ipcRenderer.invoke('export:csv'),
   importCSV: () => ipcRenderer.invoke('import:csv'),
