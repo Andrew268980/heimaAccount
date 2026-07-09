@@ -171,7 +171,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-4 py-6">
-        {activeTab === 'bills' ? (
+        {activeTab === 'bills' && (
           <>
             {/* Add / Edit Form */}
             {showForm && (
@@ -189,20 +189,16 @@ export default function App() {
             {/* Expense List */}
             <ExpenseList refreshKey={refreshKey} onEdit={openEditForm} />
           </>
-        ) : activeTab === 'stats' ? (
-          /* Statistics */
-          <StatsPage />
-        ) : activeTab === 'settings' ? (
-          /* Settings */
+        )}
+        {activeTab === 'stats' && <StatsPage />}
+        {activeTab === 'settings' && (
           <SettingsPage
             onCategoriesChanged={() => {
               setRefreshKey((k) => k + 1)
             }}
           />
-        ) : (
-          /* Game */
-          <SnakeGame />
         )}
+        {activeTab === 'game' && <SnakeGame />}
       </main>
     </div>
   )

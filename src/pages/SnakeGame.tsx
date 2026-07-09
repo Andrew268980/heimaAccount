@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button'
 const CELL = 20
 const COLS = 30
 const ROWS = 20
+const TOTAL_CELLS = COLS * ROWS
 const INITIAL_SPEED = 150
 
 type Point = { x: number; y: number }
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT'
+type GameState = 'idle' | 'running' | 'over'
 
 const DIR: Record<Direction, Point> = {
   UP: { x: 0, y: -1 },
@@ -17,14 +19,32 @@ const DIR: Record<Direction, Point> = {
   RIGHT: { x: 1, y: 0 },
 }
 
+const KEY_MAP: Record<string, Direction> = {
+  ArrowUp: 'UP', w: 'UP', W: 'UP',
+  ArrowDown: 'DOWN', s: 'DOWN', S: 'DOWN',
+  ArrowLeft: 'LEFT', a: 'LEFT', A: 'LEFT',
+  ArrowRight: 'RIGHT', d: 'RIGHT', D: 'RIGHT',
+}
+
 function randomFood(snake: Point[]): Point {
-  while (true) {
-    const p = {
-      x: Math.floor(Math.random() * COLS),
-      y: Math.floor(Math.random() * ROWS),
-    }
-    if (!snake.some((s) => s.x === p.x && s.y === p.y)) return p
+  const occupied = new Set(snake.map((s) => s.y * COLS + s.x))
+
+  // Random sampling for up to 100 attempts
+  for (let i = 0; i < 100; i++) {
+    const x = Math.floor(Math.random() * COLS)
+    const y = Math.floor(Math.random() * ROWS)
+    if (!occupied.has(y * COLS + x)) return { x, y }
   }
+
+  // Fallback: sequential scan of all cells
+  for (let idx = 0; idx < TOTAL_CELLS; idx++) {
+    const x = idx % COLS
+    const y = Math.floor(idx / COLS)
+    if (!occupied.has(y * COLS + x)) return { x, y }
+  }
+
+  // Board completely full (only reachable after 599 food eaten)
+  return { x: 0, y: 0 }
 }
 
 const INITIAL_SNAKE: Point[] = [
@@ -43,11 +63,19 @@ export default function SnakeGame() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scoreRef = useRef(0)
 
-  const [gameState, setGameState] = useState<'idle' | 'running' | 'over'>('idle')
+  const [gameState, setGameState] = useState<GameState>('idle')
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(() => {
     try { return parseInt(localStorage.getItem('snake-high-score') || '0') } catch { return 0 }
   })
+
+  // Refs to keep the game loop from going stale — tick reads these, not the state values
+  const gameStateRef = useRef<GameState>('idle')
+  const highScoreRef = useRef(highScore)
+
+  // Sync refs with state whenever state changes
+  useEffect(() => { gameStateRef.current = gameState }, [gameState])
+  useEffect(() => { highScoreRef.current = highScore }, [highScore])
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -83,7 +111,6 @@ export default function SnakeGame() {
       ctx.fillStyle = i === 0 ? '#059669' : '#10b981'
       ctx.fillRect(p.x * CELL + 1, p.y * CELL + 1, CELL - 2, CELL - 2)
       if (i === 0) {
-        // Eyes
         ctx.fillStyle = '#fff'
         const cx = p.x * CELL + CELL / 2, cy = p.y * CELL + CELL / 2
         ctx.beginPath(); ctx.arc(cx - 3, cy - 3, 3, 0, Math.PI * 2); ctx.fill()
@@ -92,7 +119,22 @@ export default function SnakeGame() {
     })
   }, [])
 
+  function endGame() {
+    gameStateRef.current = 'over'
+    setGameState('over')
+    const final = scoreRef.current
+    // Use highScoreRef to avoid stale closure on state
+    if (final > highScoreRef.current) {
+      highScoreRef.current = final
+      setHighScore(final)
+      try { localStorage.setItem('snake-high-score', String(final)) } catch { /* noop */ }
+    }
+  }
+
   const tick = useCallback(() => {
+    // Guard: don't execute if the game was stopped/paused
+    if (gameStateRef.current !== 'running') return
+
     const snake = snakeRef.current
     const food = foodRef.current
 
@@ -108,12 +150,12 @@ export default function SnakeGame() {
       return endGame()
     }
 
-    // Self collision → die
-    if (snake.some((s) => s.x === newHead.x && s.y === newHead.y)) {
+    // Self collision → die (exclude tail when not eating, since it will be removed)
+    const ate = newHead.x === food.x && newHead.y === food.y
+    const bodyToCheck = ate ? snake : snake.slice(0, -1)
+    if (bodyToCheck.some((s) => s.x === newHead.x && s.y === newHead.y)) {
       return endGame()
     }
-
-    const ate = newHead.x === food.x && newHead.y === food.y
 
     const newSnake = [newHead, ...snake]
     if (!ate) newSnake.pop()
@@ -124,7 +166,6 @@ export default function SnakeGame() {
 
     if (ate) {
       foodRef.current = randomFood(newSnake)
-      // Speed up every 5 eaten
       if (scoreRef.current % 5 === 0 && speedRef.current > 60) {
         speedRef.current -= 10
       }
@@ -134,16 +175,12 @@ export default function SnakeGame() {
     timerRef.current = setTimeout(tick, speedRef.current)
   }, [draw])
 
-  function endGame() {
-    setGameState('over')
-    const final = scoreRef.current
-    if (final > highScore) {
-      setHighScore(final)
-      try { localStorage.setItem('snake-high-score', String(final)) } catch { /* noop */ }
-    }
-  }
-
   function startGame() {
+    // Clear any pending timer to prevent double game loops
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
     snakeRef.current = [...INITIAL_SNAKE]
     foodRef.current = randomFood(INITIAL_SNAKE)
     dirRef.current = 'RIGHT'
@@ -151,13 +188,18 @@ export default function SnakeGame() {
     speedRef.current = INITIAL_SPEED
     scoreRef.current = 0
     setScore(0)
+    gameStateRef.current = 'running'
     setGameState('running')
     draw()
     timerRef.current = setTimeout(tick, speedRef.current)
   }
 
   function stopGame() {
-    if (timerRef.current) clearTimeout(timerRef.current)
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    gameStateRef.current = 'idle'
     setGameState('idle')
     draw()
   }
@@ -165,18 +207,12 @@ export default function SnakeGame() {
   // Keyboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const map: Record<string, Direction> = {
-        ArrowUp: 'UP', w: 'UP', W: 'UP',
-        ArrowDown: 'DOWN', s: 'DOWN', S: 'DOWN',
-        ArrowLeft: 'LEFT', a: 'LEFT', A: 'LEFT',
-        ArrowRight: 'RIGHT', d: 'RIGHT', D: 'RIGHT',
-      }
-      const next = map[e.key]
+      const next = KEY_MAP[e.key]
       if (!next) return
       e.preventDefault()
 
-      // Can't reverse
-      const current = nextDirRef.current
+      // Can't reverse: compare against actual current direction, not pending
+      const current = dirRef.current
       if (
         (current === 'UP' && next === 'DOWN') ||
         (current === 'DOWN' && next === 'UP') ||
@@ -186,11 +222,11 @@ export default function SnakeGame() {
 
       nextDirRef.current = next
 
-      if (gameState === 'idle') startGame()
+      if (gameStateRef.current === 'idle') startGame()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [gameState])
+  }, []) // Stable effect — reads gameStateRef.current, not state
 
   // Cleanup on unmount
   useEffect(() => {
