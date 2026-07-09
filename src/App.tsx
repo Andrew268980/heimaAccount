@@ -5,11 +5,12 @@ import ExpenseForm from '@/components/ExpenseForm'
 import ExpenseList from '@/components/ExpenseList'
 import StatsPage from '@/pages/StatsPage'
 import SettingsPage from '@/pages/SettingsPage'
+import SnakeGame from '@/pages/SnakeGame'
 import { addExpense, updateExpense, exportCSV, importCSV } from '@/lib/db'
 import { cn } from '@/lib/utils'
 import type { AddExpenseRequest, Expense } from '@/types/expense'
 
-type Tab = 'bills' | 'stats' | 'settings'
+type Tab = 'bills' | 'stats' | 'settings' | 'game'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('bills')
@@ -86,6 +87,7 @@ export default function App() {
     { key: 'bills', label: '账单' },
     { key: 'stats', label: '统计' },
     { key: 'settings', label: '设置' },
+    { key: 'game', label: '游戏' },
   ]
 
   return (
@@ -190,13 +192,16 @@ export default function App() {
         ) : activeTab === 'stats' ? (
           /* Statistics */
           <StatsPage />
-        ) : (
+        ) : activeTab === 'settings' ? (
           /* Settings */
           <SettingsPage
             onCategoriesChanged={() => {
               setRefreshKey((k) => k + 1)
             }}
           />
+        ) : (
+          /* Game */
+          <SnakeGame />
         )}
       </main>
     </div>
