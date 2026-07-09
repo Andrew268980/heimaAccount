@@ -1,24 +1,90 @@
 import { useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, Download, Upload, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import ExpenseForm from '@/components/ExpenseForm'
 import ExpenseList from '@/components/ExpenseList'
-import { addExpense } from '@/lib/db'
-import type { AddExpenseRequest } from '@/types/expense'
+import StatsPage from '@/pages/StatsPage'
+import { addExpense, updateExpense, exportCSV, importCSV } from '@/lib/db'
+import { cn } from '@/lib/utils'
+import type { AddExpenseRequest, Expense } from '@/types/expense'
+
+type Tab = 'bills' | 'stats'
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<Tab>('bills')
   const [showForm, setShowForm] = useState(false)
+  const [editingRecord, setEditingRecord] = useState<Expense | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  function showToast(type: 'success' | 'error', message: string) {
+    setToast({ type, message })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  async function handleExport() {
+    try {
+      const result = await exportCSV()
+      showToast(result.success ? 'success' : 'error', result.message)
+    } catch {
+      showToast('error', '导出失败')
+    }
+  }
+
+  async function handleImport() {
+    try {
+      const result = await importCSV()
+      if (result.success) {
+        setRefreshKey((k) => k + 1)
+      }
+      showToast(result.success ? 'success' : 'error', result.message)
+    } catch {
+      showToast('error', '导入失败')
+    }
+  }
 
   async function handleAdd(data: AddExpenseRequest) {
     try {
       await addExpense(data)
       setShowForm(false)
+      setEditingRecord(null)
       setRefreshKey((k) => k + 1)
     } catch (e) {
       console.error('Failed to add expense:', e)
     }
   }
+
+  async function handleEdit(data: AddExpenseRequest) {
+    try {
+      if (!editingRecord?.id) return
+      await updateExpense(editingRecord.id, data)
+      setShowForm(false)
+      setEditingRecord(null)
+      setRefreshKey((k) => k + 1)
+    } catch (e) {
+      console.error('Failed to update expense:', e)
+    }
+  }
+
+  function openAddForm() {
+    setEditingRecord(null)
+    setShowForm(true)
+  }
+
+  function openEditForm(record: Expense) {
+    setEditingRecord(record)
+    setShowForm(true)
+  }
+
+  function closeForm() {
+    setShowForm(false)
+    setEditingRecord(null)
+  }
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'bills', label: '账单' },
+    { key: 'stats', label: '统计' },
+  ]
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -29,42 +95,100 @@ export default function App() {
             <span>🐴</span>
             <span>黑马记账</span>
           </h1>
-          {!showForm && (
-            <Button onClick={() => setShowForm(true)} size="sm">
-              <Plus className="h-4 w-4 mr-1" />
-              记一笔
-            </Button>
-          )}
-          {showForm && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowForm(false)}
+          <div className="flex items-center gap-2">
+            {activeTab === 'bills' && (
+              <>
+                {!showForm ? (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={handleImport}>
+                      <Upload className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={handleExport}>
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={openAddForm} size="sm">
+                      <Plus className="h-4 w-4 mr-1" />
+                      记一笔
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="ghost" size="sm" onClick={closeForm}>
+                    <X className="h-4 w-4 mr-1" />
+                    关闭
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="max-w-2xl mx-auto px-4 flex gap-6">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                setActiveTab(tab.key)
+                closeForm()
+              }}
+              className={cn(
+                'pb-3 px-1 text-sm font-medium border-b-2 transition-colors',
+                activeTab === tab.key
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-slate-400 hover:text-slate-600',
+              )}
             >
-              <X className="h-4 w-4 mr-1" />
-              关闭
-            </Button>
-          )}
+              {tab.label}
+            </button>
+          ))}
         </div>
       </header>
 
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50">
+          <div
+            className={cn(
+              'flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium',
+              toast.type === 'success'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : 'bg-red-50 text-red-700 border border-red-200',
+            )}
+          >
+            {toast.type === 'success' ? (
+              <CheckCircle2 className="h-4 w-4" />
+            ) : (
+              <AlertCircle className="h-4 w-4" />
+            )}
+            {toast.message}
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-4 py-6">
-        {/* Add Expense Form */}
-        {showForm && (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">
-              记录一笔支出
-            </h2>
-            <ExpenseForm
-              onSubmit={handleAdd}
-              onCancel={() => setShowForm(false)}
-            />
-          </div>
+        {activeTab === 'bills' ? (
+          <>
+            {/* Add / Edit Form */}
+            {showForm && (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+                <h2 className="text-lg font-semibold text-slate-800 mb-4">
+                  {editingRecord ? '修改记录' : '记录一笔'}
+                </h2>
+                <ExpenseForm
+                  onSubmit={editingRecord ? handleEdit : handleAdd}
+                  onCancel={closeForm}
+                  editRecord={editingRecord}
+                />
+              </div>
+            )}
+            {/* Expense List */}
+            <ExpenseList refreshKey={refreshKey} onEdit={openEditForm} />
+          </>
+        ) : (
+          /* Statistics */
+          <StatsPage />
         )}
-
-        {/* Expense List */}
-        <ExpenseList refreshKey={refreshKey} />
       </main>
     </div>
   )

@@ -4,23 +4,27 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CATEGORIES } from '@/lib/categories'
 import { cn } from '@/lib/utils'
-import type { AddExpenseRequest } from '@/types/expense'
+import type { AddExpenseRequest, Expense, RecordType } from '@/types/expense'
 
 interface ExpenseFormProps {
   onSubmit: (data: AddExpenseRequest) => void
   onCancel: () => void
+  // 编辑模式：传入已有记录
+  editRecord?: Expense | null
 }
 
-export default function ExpenseForm({ onSubmit, onCancel }: ExpenseFormProps) {
+export default function ExpenseForm({ onSubmit, onCancel, editRecord }: ExpenseFormProps) {
   const today = new Date().toISOString().slice(0, 10)
 
-  const [amount, setAmount] = useState('')
-  const [level1, setLevel1] = useState('')
-  const [level2, setLevel2] = useState('')
-  const [date, setDate] = useState(today)
-  const [note, setNote] = useState('')
+  const [recordType, setRecordType] = useState<RecordType>(editRecord?.type || 'expense')
+  const [amount, setAmount] = useState(editRecord ? String(editRecord.amount) : '')
+  const [level1, setLevel1] = useState(editRecord?.category_level1 || '')
+  const [level2, setLevel2] = useState(editRecord?.category_level2 || '')
+  const [date, setDate] = useState(editRecord?.date || today)
+  const [note, setNote] = useState(editRecord?.note || '')
 
   const selectedCategory = CATEGORIES.find((c) => c.name === level1)
+  const isEdit = !!editRecord
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,6 +35,7 @@ export default function ExpenseForm({ onSubmit, onCancel }: ExpenseFormProps) {
 
     onSubmit({
       amount: Math.round(numAmount * 100) / 100,
+      type: recordType,
       category_level1: level1,
       category_level2: level2,
       date,
@@ -47,6 +52,34 @@ export default function ExpenseForm({ onSubmit, onCancel }: ExpenseFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* 收入/支出 类型切换 */}
+      <div className="flex rounded-lg bg-slate-100 p-1">
+        <button
+          type="button"
+          onClick={() => setRecordType('expense')}
+          className={cn(
+            'flex-1 rounded-md py-2 text-sm font-medium transition-all',
+            recordType === 'expense'
+              ? 'bg-white text-red-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700',
+          )}
+        >
+          支出
+        </button>
+        <button
+          type="button"
+          onClick={() => setRecordType('income')}
+          className={cn(
+            'flex-1 rounded-md py-2 text-sm font-medium transition-all',
+            recordType === 'income'
+              ? 'bg-white text-emerald-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700',
+          )}
+        >
+          收入
+        </button>
+      </div>
+
       {/* Amount */}
       <div className="space-y-2">
         <Label htmlFor="amount">金额（元）</Label>
@@ -144,7 +177,7 @@ export default function ExpenseForm({ onSubmit, onCancel }: ExpenseFormProps) {
       {/* Buttons */}
       <div className="flex gap-3 pt-2">
         <Button type="submit" disabled={!isValid} size="lg" className="flex-1">
-          记录支出
+          {isEdit ? '保存修改' : recordType === 'expense' ? '记录支出' : '记录收入'}
         </Button>
         <Button type="button" variant="outline" size="lg" onClick={onCancel}>
           取消

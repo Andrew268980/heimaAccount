@@ -21,7 +21,8 @@
       "Bash(pkill -f \"cargo\")",
       "Bash(pkill -f \"tauri\")",
       "Bash(npx tsc *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(node -e ' *)"
     ]
   }
 }

@@ -1,6 +1,9 @@
+export type RecordType = 'expense' | 'income'
+
 export interface Expense {
   id?: number
   amount: number
+  type?: RecordType
   category_level1: string
   category_level2: string
   date: string
@@ -10,6 +13,7 @@ export interface Expense {
 
 export interface AddExpenseRequest {
   amount: number
+  type?: RecordType
   category_level1: string
   category_level2: string
   date: string

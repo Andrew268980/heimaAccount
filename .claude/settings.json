@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(gh --version)",
-      "Bash(git init *)"
+      "Bash(git init *)",
+      "Bash(git commit -m '黑马记账 - PWA 版 *)",
+      "Bash(winget install *)",
+      "Bash(find \"C:/Program Files\" -name \"gh.exe\" -type f 2>/dev/null | head -3)",
+      "Read(//c/Program Files/**)"
     ]
   }
 }
