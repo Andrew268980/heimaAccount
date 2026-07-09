@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-黑马记账 — 跨平台桌面记账应用，支持 Windows 10+ / macOS 11+。
+记账工具 — 跨平台桌面记账应用，支持 Windows 10+ / macOS 11+。
 
 ## 技术栈
 

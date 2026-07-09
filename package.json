@@ -46,7 +46,7 @@
   },
   "build": {
     "appId": "com.heima.account",
-    "productName": "黑马记账",
+    "productName": "记账工具",
     "directories": {
       "output": "release"
     },

@@ -94,8 +94,8 @@ export default function App() {
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-slate-200">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <span>🐴</span>
-            <span>黑马记账</span>
+            <span>📒</span>
+            <span>记账工具</span>
           </h1>
           <div className="flex items-center gap-2">
             {activeTab === 'bills' && (

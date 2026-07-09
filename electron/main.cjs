@@ -7,11 +7,11 @@ let mainWindow = null
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    minWidth: 900,
-    minHeight: 600,
-    title: '黑马记账',
+    width: 900,
+    height: 700,
+    minWidth: 700,
+    minHeight: 500,
+    title: '记账工具',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -266,7 +266,7 @@ function registerIpcHandlers(db) {
   ipcMain.handle('export:csv', async () => {
     const result = await dialog.showSaveDialog(mainWindow, {
       title: '导出数据',
-      defaultPath: `黑马记账_导出_${new Date().toISOString().slice(0, 10)}.csv`,
+      defaultPath: `记账工具_导出_${new Date().toISOString().slice(0, 10)}.csv`,
       filters: [{ name: 'CSV 文件', extensions: ['csv'] }],
     })
 
